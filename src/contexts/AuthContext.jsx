@@ -15,6 +15,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(res.data.user));
     setUser(res.data.user);
   };
+  
+  const updateUserProfile = async (newName) => {
+    await api.patch("/auth/updateProfile",{ name: newName });
+    
+    const updatedUser = { ...user, name: newName };
+    setUser(updatedUser);
+
+    // 2. Update localStorage so the change persists on refresh
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+  };
 
   const signup = async (name, email, password) => {
     await api.post("/auth/signup", { name, email, password });
@@ -27,7 +37,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, updateUserProfile}}>
       {children}
     </AuthContext.Provider>
   );
