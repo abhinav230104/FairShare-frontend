@@ -1,6 +1,14 @@
 import api from "./axios";
 
-export const getMyRooms = () => api.get("/rooms/my");
-export const createRoom = (name) => api.post("/rooms", { name });
-export const joinRoom = (roomId) => api.post(`/rooms/${roomId}/join`);
-export const getRoomDetails = (roomId) => api.get(`/rooms/${roomId}`);
+export const getMyRooms = async () => {
+    const res=await api.get("/rooms/my");
+    return res.data;
+}
+export const createRoom =(name) => api.post("/rooms/create", { name });
+export const joinRoom = (roomId) => api.post("/rooms/join",{roomId});
+
+export const getRoomDetails = async (roomId) => {
+    const res= await api.get(`/rooms/${roomId}`);
+    return res.data;
+}
+
