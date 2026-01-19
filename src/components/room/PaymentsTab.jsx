@@ -295,7 +295,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                 splitText = "All Members";
             } else if (expense.shares && expense.shares.length > 0) {
                 // REVERTED: Using s.user instead of s.user._id
-                const names = expense.shares.map(s => getName(s.user._id));
+                const names = expense.shares.map(s => getName(s.user._));
                 splitText = names.join(", ");
             } else {
                 splitText = "Unknown";

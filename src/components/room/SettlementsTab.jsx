@@ -6,7 +6,6 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
   const { user } = useAuth();
   const [settlements, setSettlements] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState(null);
 
   const fetchSettlements = async () => {
     try {
@@ -23,42 +22,6 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
   useEffect(() => {
     fetchSettlements();
   }, [roomId]);
-
-  const handleSettleUp = async (settlement) => {
-    // settlement object structure: { from: userId, to: userId, amount: number }
-    
-    if (!window.confirm(`Mark this debt of ₹${settlement.amount} as settled?`)) return;
-
-    try {
-      // Create a unique ID for the button loader
-      const uniqueId = `${settlement.from}-${settlement.to}`;
-      setProcessingId(uniqueId);
-
-      // Construct the "Settlement" expense payload
-      // Logic: Debtor (from) pays the Creditor (to).
-      // If Debtor pays, and Creditor is the only participant, the math cancels out.
-      const payload = {
-        roomId,
-        title: 'Settlement',
-        amount: Number(settlement.amount),
-        category: 'Settlement',
-        payer: settlement.from,      // The person who owes money PAYS
-        participants: [settlement.to] // The person who receives money is the "consumer" of this payment value
-      };
-
-      await addExpense(payload);
-      
-      // Refresh local list and global stats
-      await fetchSettlements();
-      if (onRefresh) onRefresh();
-
-    } catch (err) {
-      console.error(err);
-      alert("Failed to settle debt.");
-    } finally {
-      setProcessingId(null);
-    }
-  };
 
   const getName = (id) => {
     const m = members.find(m => m.user?._id === id || m.user === id);
@@ -86,14 +49,7 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
           {settlements.map((item, idx) => {
             const fromName = getName(item.from);
             const toName = getName(item.to);
-            const uniqueId = `${item.from}-${item.to}`;
             
-            // Allow settlement if: Admin, Current User is Payer, or Current User is Payee
-            const canSettle = 
-                currentUserRole === 'admin' || 
-                user?._id === item.from || 
-                user?._id === item.to;
-
             return (
               <div key={idx} className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 hover:shadow-md transition-all relative overflow-hidden group">
                 
@@ -101,7 +57,7 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
                 <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-emerald-500 rounded-l-xl"></div>
 
                 {/* --- Visual Flow: User A -> Amount -> User B --- */}
-                <div className="flex items-center gap-4 sm:gap-8 w-full justify-center sm:justify-start">
+                <div className="flex items-center gap-4 sm:gap-8 w-full justify-center">
                   
                   {/* Debtor (From) */}
                   <div className="flex flex-col items-center gap-1 min-w-[80px]">
@@ -112,9 +68,9 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
                   </div>
 
                   {/* Arrow & Amount */}
-                  <div className="flex flex-col items-center flex-1">
+                  <div className="flex flex-col items-center flex-1 max-w-[200px]">
                     <span className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Pays</span>
-                    <div className="relative flex items-center w-full max-w-[120px]">
+                    <div className="relative flex items-center w-full">
                        <div className="h-[2px] w-full bg-gray-200"></div>
                        <svg className="absolute right-0 w-4 h-4 text-gray-300 -mr-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"></path></svg>
                     </div>
@@ -130,17 +86,6 @@ const SettlementsTab = ({ roomId, members = [], currentUserRole, onRefresh }) =>
                   </div>
 
                 </div>
-
-                {/* --- Action Button --- */}
-                {canSettle && (
-                  <button
-                    onClick={() => handleSettleUp(item)}
-                    disabled={processingId === uniqueId}
-                    className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm active:scale-95 disabled:opacity-50 disabled:scale-100"
-                  >
-                    {processingId === uniqueId ? 'Settling...' : 'Mark Paid'}
-                  </button>
-                )}
 
               </div>
             );
