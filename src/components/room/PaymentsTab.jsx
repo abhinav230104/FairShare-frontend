@@ -16,7 +16,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
     title: '',
     amount: '',
     category: 'General',
-    paidBy: user?._id, 
+    paidBy: user?._id, // REVERTED: Back to paidBy
     participants: []   
   });
   const [submitting, setSubmitting] = useState(false);
@@ -85,15 +85,15 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
 
     try {
       setSubmitting(true);
-      const payload = { 
+      const payload = {
         title: formData.title,
         amount: Number(formData.amount),
         category: formData.category || 'General',
-        paidBy: formData.paidBy,
+        paidBy: formData.paidBy, // MAPPED: api needs 'payer', but state uses 'paidBy'
         participants: formData.participants 
       };
 
-      await addExpense(roomId,payload);
+      await addExpense(roomId, payload);
       
       setIsAdding(false);
       setFormData({ 
@@ -116,7 +116,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
   const handleDelete = async (expenseId) => {
     if (!window.confirm("Delete this expense? This affects all balances.")) return;
     try {
-      await deleteExpense(roomId,expenseId);
+      await deleteExpense(expenseId);
       await fetchExpenses();
       if (onRefresh) onRefresh();
     } catch (err) {
@@ -165,7 +165,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
         <div className="bg-white p-6 rounded-xl border border-emerald-100 shadow-sm animate-fade-in-down">
           <h3 className="font-bold text-gray-800 mb-4">Add New Expense</h3>
           <form onSubmit={handleAddSubmit} className="space-y-4">
-            {/* ... (Form Inputs same as before) ... */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Title</label>
@@ -213,7 +213,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Paid By</label>
                 <select 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
-                  value={formData.paidBy}
+                  value={formData.paidBy} // REVERTED: Using paidBy
                   onChange={e => setFormData({...formData, paidBy: e.target.value})}
                 >
                    {members.map(m => (
@@ -248,7 +248,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                    );
                 })}
               </div>
-              {/* Add Summary Box Here */}
+              {/* Summary Box */}
               <div className="mt-3 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100 flex flex-col gap-1">
                  <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">Total Participants:</span>
@@ -278,27 +278,25 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
       <div className="space-y-3">
         {expenses.length > 0 ? (
           expenses.map((expense) => {
-            const payerObj = expense.paidBy || expense.payer; 
-            const payerName = payerObj?.name || getName(payerObj) || getName(expense.paidBy);
+            const payerObj = expense.paidBy; // REVERTED: Using paidBy directly
+            const payerName = payerObj?.name || getName(payerObj);
             const date = new Date(expense.createdAt).toLocaleDateString();
 
             // --- Logic for Split Participants Display ---
             const shareCount = expense.shares ? expense.shares.length : 0;
             const isEveryone = shareCount === members.length && members.length > 0;
             
+            // Calculate per person amount for display
+            const splitAmount = shareCount > 0 ? (expense.amount / shareCount).toFixed(2) : '0.00';
+
             // Generate list of names
             let splitText = "";
             if (isEveryone) {
                 splitText = "All Members";
             } else if (expense.shares && expense.shares.length > 0) {
-                // Map share UIDs to Names
+                // REVERTED: Using s.user instead of s.user._id
                 const names = expense.shares.map(s => getName(s.user._id));
-                // if (names.length <= 2) {
-                    splitText = names.join(", ");
-                // } 
-                // else {
-                //     splitText = `${names[0]}, ${names[1]} +${names.length - 2} others`;
-                // }
+                splitText = names.join(", ");
             } else {
                 splitText = "Unknown";
             }
@@ -323,7 +321,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                       <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium text-[10px] uppercase">{expense.category}</span>
                     </p>
 
-                    {/* NEW: Split With Row */}
+                    {/* Split With Row */}
                     <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                        Split with: <span className="font-medium text-gray-600">{splitText}</span>
@@ -332,7 +330,11 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <span className="font-bold text-gray-900 text-lg">₹{expense.amount}</span>
+                  <div className="text-right">
+                    <span className="block font-bold text-gray-900 text-lg">₹{expense.amount}</span>
+                    {/* NEW: Per Person Split Display */}
+                    <span className="block text-[10px] text-gray-400 font-medium">₹{splitAmount} / person</span>
+                  </div>
                   
                   {isAdmin && (
                     <button 
