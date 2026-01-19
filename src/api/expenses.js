@@ -1,16 +1,29 @@
 import api from "./axios";
 
-export const getRoomExpenses = (roomId) =>
-  api.get(`/rooms/${roomId}/expenses`);
+export const getExpenses = async (roomId) => {
+  const res = await api.get(`/rooms/expense/${roomId}/getExpense`);
+  return res.data;
+};
 
-export const addExpense = (roomId, expenseData) =>
-  api.post(`/rooms/${roomId}/expenses`, expenseData);
+export const addExpense = async (roomId, expenseData) => {
+  const res = await api.post(`/rooms/expense/${roomId}/addExpense`, expenseData);
+  return res.data;
+};
 
-export const deleteExpense = (roomId, expenseId) =>
-  api.delete(`/rooms/${roomId}/expenses/${expenseId}`);
+export const deleteExpense = async (roomId, expenseId) => {
+  const res = await api.delete(
+    `/rooms/expense/${roomId}/deleteExpense/${expenseId}`
+  );
+  return res.data;
+};
 
-export const getRoomBalances = (roomId) =>
-  api.get(`/rooms/${roomId}/balances`);
+export const getBalances = async (roomId) => {
+  const res = await api.get(`/rooms/expense/${roomId}/getBalance`);
+  return res.data;
+};
 
-export const getRoomSettlements = (roomId) =>
-  api.get(`/rooms/${roomId}/settlements`);
+export const getSettlements = async (roomId) => {
+  const res = await api.get(`/rooms/expense/${roomId}/getSettlement`);
+  return res.data;
+};
+

@@ -2,7 +2,7 @@ import React from 'react';
 
 const WelcomeSection = ({ user, onCreateClick, onJoinClick }) => {
   return (
-    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-10 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 mb-10 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
       
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -19,13 +19,17 @@ const WelcomeSection = ({ user, onCreateClick, onJoinClick }) => {
       <div className="flex gap-4 w-full md:w-auto">
         <button 
           onClick={onJoinClick}
-          className="flex-1 md:flex-none px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600 transition-all shadow-sm"
+          // Changed transition-all to transition-colors/transform to be safer
+          className="flex-1 md:flex-none px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600 transition-colors shadow-sm"
         >
           Join Room
         </button>
         <button 
           onClick={onCreateClick}
-          className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/30 transform hover:-translate-y-0.5"
+          // FIX APPLIED HERE:
+          // 1. Used 'will-change-transform' to optimize GPU usage
+          // 2. Kept the animation but optimized the transition class
+          className="flex-1 md:flex-none px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-transform duration-200 shadow-lg shadow-emerald-500/30 transform hover:-translate-y-0.5 will-change-transform"
         >
           + Create Room
         </button>

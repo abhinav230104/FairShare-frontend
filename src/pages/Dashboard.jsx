@@ -106,6 +106,14 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
       
+    <div className="fixed inset-0 pointer-events-none z-0">
+        {/* Top Left Emerald Blob */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-800/40 rounded-full blur-[120px] opacity-60"></div>
+        {/* Bottom Right Purple Blob */}
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-400/40 rounded-full blur-[120px] opacity-60"></div>
+        {/* Center Subtle Accent */}
+        <div className="absolute top-[40%] left-[50%] transform -translate-x-1/2 w-[60%] h-[60%] bg-slate-200/30 rounded-full blur-[100px] opacity-40"></div>
+      </div>  
       <Header 
         user={user} 
         onSignOut={handleSignOut} 
