@@ -1,7 +1,6 @@
 import React from 'react';
 
 const RoomBalances = ({ expenses, currentUser }) => {
-  
   // Basic Logic: Total / Everyone
   // (In real app, this logic is complex and handled by backend)
   const totalSpent = expenses.reduce((sum, item) => sum + item.amount, 0);

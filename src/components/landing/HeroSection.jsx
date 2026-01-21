@@ -27,7 +27,7 @@ function HeroSection({openSignup}) {
                 Get Started Free
               </button>
               <button 
-                onClick={() => navigate('/dashboard?guest=true')}
+                // onClick={() => navigate('/dashboard?guest=true')}
                 className="px-8 py-4 bg-white border-2 border-gray-200 text-gray-700 hover:border-emerald-600 hover:text-emerald-600 text-lg font-semibold rounded-xl transition-all group flex items-center justify-center gap-2"
               >
                 <span>Continue as Guest</span>

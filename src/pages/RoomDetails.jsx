@@ -13,8 +13,8 @@ import RoomDashboard from '../components/room/RoomDashboard';
 import FriendsTab from '../components/room/FriendsTab';
 import PaymentsTab from '../components/room/PaymentsTab';
 import SettlementsTab from '../components/room/SettlementsTab';
+import ReportsTab from '../components/room/ReportsTab';
 // Placeholders
-const ReportsTab = () => <div className="p-8 text-center text-gray-500 font-medium bg-white/50 rounded-xl backdrop-blur-sm">Reports & Graphs Component Coming Soon</div>;
 
 const RoomDetails = () => {
   const { roomId } = useParams();
@@ -36,6 +36,13 @@ const RoomDetails = () => {
 
   // --- Current User Role in Room ---
   const [currentUserRole, setCurrentUserRole] = useState('member');
+
+  //'/login' if you have a specific login route
+  useEffect(() => {
+    if (!user) {
+      navigate('/'); 
+    }
+  }, [user, navigate]); 
 
   // Auto-dismiss toasts
   useEffect(() => {
@@ -108,6 +115,8 @@ const RoomDetails = () => {
         name: roomDetails.name,
         members: roomDetails.members,
         currency: '₹',
+        fullExpenses: expenseList, 
+        allSettlements: settlements,
         stats: {
           totalFriends: roomDetails.members ? roomDetails.members.length : 0,
           totalPayments: expenseList.length,
@@ -277,7 +286,13 @@ const RoomDetails = () => {
             />
           )}
 
-          {activeTab === 'reports' && <ReportsTab />}
+          {activeTab === 'reports' && (
+           <ReportsTab 
+             expenses={roomData.fullExpenses} 
+             settlements={roomData.allSettlements}
+             members={roomData.members}
+           />
+          )}
         </main>
       </div>
 

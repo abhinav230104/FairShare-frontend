@@ -23,7 +23,13 @@ const Dashboard = () => {
   // --- Feedback State (Replaces Alerts) ---
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-
+  
+  //'/login' if you have a specific login route
+  useEffect(() => {
+      if (!user) {
+        navigate('/'); 
+      }
+  }, [user, navigate]); 
   // --- Data Fetching ---
   const fetchRooms = async () => {
     try {

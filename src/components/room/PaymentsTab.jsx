@@ -8,7 +8,10 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
   // --- State ---
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Feedback State
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   
   // Add Expense State
   const [isAdding, setIsAdding] = useState(false);
@@ -16,22 +19,39 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
     title: '',
     amount: '',
     category: 'General',
-    paidBy: user?._id, // REVERTED: Back to paidBy
-    participants: []   
+    paidBy: '', 
+    participants: [] 
   });
   const [submitting, setSubmitting] = useState(false);
 
   const isAdmin = currentUserRole === 'admin';
 
-  // Initialize participants with ALL members when opening form
+  // --- Auto-dismiss Feedback ---
+  useEffect(() => {
+    if (error || message) {
+      const timer = setTimeout(() => {
+        setError('');
+        setMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [error, message]);
+
+  // --- Initialize Form Data ---
   useEffect(() => {
     if (isAdding && members.length > 0) {
+      const meInRoom = members.find(m => (m.user?.userId === user?.userId));
+      const defaultPayerId = meInRoom 
+        ? (meInRoom.user?._id || meInRoom.user) 
+        : (members[0].user?._id || members[0].user);
+
       setFormData(prev => ({
         ...prev,
-        participants: members.map(m => m.user?._id || m.user)
+        paidBy: defaultPayerId, 
+        participants: [] 
       }));
     }
-  }, [isAdding, members]);
+  }, [isAdding, members, user]);
 
   // --- Fetch Expenses ---
   const fetchExpenses = async () => {
@@ -78,36 +98,48 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.amount) return;
+    
     if (formData.participants.length === 0) {
-      alert("Please select at least one participant.");
+      setError("Please select at least one participant.");
       return;
+    }
+
+    if (!formData.paidBy) {
+        setError("Please select who paid.");
+        return;
     }
 
     try {
       setSubmitting(true);
-      const payload = {
+      setError('');
+      setMessage('');
+
+      const payload = { 
         title: formData.title,
         amount: Number(formData.amount),
         category: formData.category || 'General',
-        paidBy: formData.paidBy, // MAPPED: api needs 'payer', but state uses 'paidBy'
+        paidBy: formData.paidBy, 
         participants: formData.participants 
       };
 
-      await addExpense(roomId, payload);
+      await addExpense(roomId,payload);
       
       setIsAdding(false);
+      setMessage("Expense added successfully!"); 
+      
       setFormData({ 
         title: '', 
         amount: '', 
         category: 'General', 
-        paidBy: user?._id, 
+        paidBy: '', 
         participants: [] 
       });
+      
       await fetchExpenses();
       if (onRefresh) onRefresh(); 
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || 'Failed to add expense');
+      setError(err.response?.data?.message || 'Failed to add expense');
     } finally {
       setSubmitting(false);
     }
@@ -116,18 +148,38 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
   const handleDelete = async (expenseId) => {
     if (!window.confirm("Delete this expense? This affects all balances.")) return;
     try {
-      await deleteExpense(expenseId);
+      setError('');
+      setMessage('');
+      await deleteExpense(roomId,expenseId); 
+      setMessage("Expense deleted.");
       await fetchExpenses();
       if (onRefresh) onRefresh();
     } catch (err) {
-      alert("Failed to delete expense.");
+      setError("Failed to delete expense.");
     }
   };
 
-  const getName = (id) => {
-    const m = members.find(m => m.user?._id === id || m.user === id);
-    if (m) return m.user?.name || 'Unknown';
-    return 'User'; 
+  // --- Smart Name Resolver ---
+  const getName = (userOrId) => {
+    let id = userOrId;
+    let nameFromRecord = null;
+
+    if (typeof userOrId === 'object' && userOrId !== null) {
+        id = userOrId._id || userOrId.id;
+        nameFromRecord = userOrId.name;
+    }
+
+    const activeMember = members.find(m => (m.user?._id === id) || (m.user === id));
+
+    if (activeMember) {
+        return activeMember.user?.name || 'Unknown';
+    }
+
+    if (nameFromRecord) {
+        return `${nameFromRecord} (Left)`;
+    }
+
+    return 'Former Member';
   };
 
   // --- Calculations for UI ---
@@ -142,10 +194,10 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
   if (loading && !expenses.length) return <div className="p-8 text-center text-gray-500">Loading expenses...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-20">
       
       {/* --- Header & Add Button --- */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-2">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Expense History</h2>
           <p className="text-sm text-gray-500">View and manage group spending</p>
@@ -160,9 +212,13 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
         )}
       </div>
 
+      {/* --- Feedback Messages --- */}
+      {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm border border-red-100 font-medium animate-fade-in">{error}</div>}
+      {message && <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg text-sm border border-emerald-100 font-medium animate-fade-in">{message}</div>}
+
       {/* --- Add Expense Form --- */}
       {isAdding && (
-        <div className="bg-white p-6 rounded-xl border border-emerald-100 shadow-sm animate-fade-in-down">
+        <div className="bg-white p-6 rounded-xl border border-emerald-100 shadow-sm animate-fade-in-down mb-6">
           <h3 className="font-bold text-gray-800 mb-4">Add New Expense</h3>
           <form onSubmit={handleAddSubmit} className="space-y-4">
             
@@ -186,6 +242,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none"
                   value={formData.amount}
                   onChange={e => setFormData({...formData, amount: e.target.value})}
+                  onWheel={(e) => e.target.blur()} 
                   required
                 />
               </div>
@@ -213,7 +270,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Paid By</label>
                 <select 
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
-                  value={formData.paidBy} // REVERTED: Using paidBy
+                  value={formData.paidBy}
                   onChange={e => setFormData({...formData, paidBy: e.target.value})}
                 >
                    {members.map(m => (
@@ -248,6 +305,7 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
                    );
                 })}
               </div>
+              
               {/* Summary Box */}
               <div className="mt-3 p-4 bg-emerald-50/50 rounded-lg border border-emerald-100 flex flex-col gap-1">
                  <div className="flex justify-between items-center text-sm">
@@ -274,72 +332,96 @@ const PaymentsTab = ({ roomId, members = [], currentUserRole, onRefresh }) => {
         </div>
       )}
 
-      {/* --- Expenses List --- */}
+      {/* --- Expenses List (Redesigned) --- */}
       <div className="space-y-3">
         {expenses.length > 0 ? (
           expenses.map((expense) => {
-            const payerObj = expense.paidBy; // REVERTED: Using paidBy directly
-            const payerName = payerObj?.name || getName(payerObj);
+            const payerObj = expense.paidBy; 
+            const payerName = getName(payerObj); 
             const date = new Date(expense.createdAt).toLocaleDateString();
 
-            // --- Logic for Split Participants Display ---
             const shareCount = expense.shares ? expense.shares.length : 0;
-            const isEveryone = shareCount === members.length && members.length > 0;
-            
-            // Calculate per person amount for display
+            const sharesList = expense.shares || [];
+
+            const activeMemberIds = new Set(members.map(m => m.user?._id || m.user));
+            const hasLeftMember = sharesList.some(s => {
+                const uid = s.user?._id || s.user;
+                return !activeMemberIds.has(uid);
+            });
+
+            const isEveryone = (shareCount === members.length) && !hasLeftMember && members.length > 0;
             const splitAmount = shareCount > 0 ? (expense.amount / shareCount).toFixed(2) : '0.00';
 
-            // Generate list of names
             let splitText = "";
             if (isEveryone) {
                 splitText = "All Members";
-            } else if (expense.shares && expense.shares.length > 0) {
-                // REVERTED: Using s.user instead of s.user._id
-                const names = expense.shares.map(s => getName(s.user._));
+            } else if (sharesList.length > 0) {
+                const names = sharesList.map(s => getName(s.user));
                 splitText = names.join(", ");
             } else {
                 splitText = "Unknown";
             }
 
             return (
-              <div key={expense._id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex justify-between items-center group">
+              <div key={expense._id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group relative overflow-hidden">
                 
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg">
-                    {payerName.charAt(0).toUpperCase()}
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-bold text-gray-800 text-base">{expense.title}</h3>
+                {/* --- Left Content Area --- */}
+                <div className="flex items-start gap-3 w-full">
                     
-                    {/* Date and Category Row */}
-                    <p className="text-xs text-gray-500 flex items-center gap-2 mt-0.5">
-                      <span className="font-medium text-emerald-600">{payerName}</span> paid
-                      <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                      {date}
-                      <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                      <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium text-[10px] uppercase">{expense.category}</span>
-                    </p>
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg shrink-0 mt-0.5 border border-emerald-100">
+                        {payerName.charAt(0).toUpperCase()}
+                    </div>
 
-                    {/* Split With Row */}
-                    <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                       Split with: <span className="font-medium text-gray-600">{splitText}</span>
-                    </p>
-                  </div>
+                    {/* Text Details */}
+                    <div className="flex-1 min-w-0">
+                        
+                        {/* Title Row */}
+                        <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-gray-800 text-base leading-snug pr-2 break-words">{expense.title}</h3>
+                            
+                            {/* Mobile-Only Amount */}
+                            <div className="block sm:hidden text-right leading-tight shrink-0">
+                                <span className="block font-bold text-gray-900 text-base">₹{expense.amount}</span>
+                                <span className="block text-[10px] text-gray-500 font-medium">₹{splitAmount}/p</span>
+                            </div>
+                        </div>
+
+                        {/* Metadata Row (Updated for full name + "paid") */}
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-1 text-xs text-gray-500">
+                            {/* Full Name (No truncate) */}
+                            <span className="font-medium text-emerald-600 break-words">{payerName}</span>
+                            <span className="text-gray-400 font-normal">paid</span>
+                            
+                            <span className="text-gray-300 mx-0.5">•</span>
+                            <span>{date}</span>
+                            
+                            <span className="text-gray-300 hidden xs:inline mx-0.5">•</span>
+                            <span className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-bold text-[10px] uppercase tracking-wide border border-gray-200">{expense.category}</span>
+                        </div>
+
+                        {/* Split Details Row */}
+                        <p className="text-[11px] text-gray-400 mt-2 flex items-start gap-1.5 leading-relaxed">
+                            <svg className="w-3 h-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                            <span className="line-clamp-2">Split with: <span className="font-medium text-gray-600">{splitText}</span></span>
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
+                {/* --- Right Content Area (Desktop Only) & Actions --- */}
+                <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-dashed border-gray-100 sm:border-transparent">
+                  
+                  {/* Desktop Amount Block */}
+                  <div className="hidden sm:block text-right">
                     <span className="block font-bold text-gray-900 text-lg">₹{expense.amount}</span>
-                    {/* NEW: Per Person Split Display */}
                     <span className="block text-[10px] text-gray-400 font-medium">₹{splitAmount} / person</span>
                   </div>
                   
+                  {/* Delete Button (Visible on mobile, Hover on desktop) */}
                   {isAdmin && (
                     <button 
                       onClick={() => handleDelete(expense._id)}
-                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                      className="p-2 ml-auto sm:ml-0 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-100 sm:opacity-0 group-hover:opacity-100"
                       title="Delete Expense"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
