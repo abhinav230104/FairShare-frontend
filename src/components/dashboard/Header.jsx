@@ -88,7 +88,8 @@ const Header = ({ user, onSignOut }) => {
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl sm:text-3xl">
               ⚖️
             </div>
-            <span className=" xs:block text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">FairShare</span>
+            {/* FIX: Smaller font (text-xl) on mobile, larger (text-3xl) on desktop */}
+            <span className="text-xl sm:text-3xl font-bold tracking-tight text-gray-900">FairShare</span>
           </div>
 
           {/* User Profile & Actions */}
@@ -158,10 +159,17 @@ const Header = ({ user, onSignOut }) => {
 
             {/* Sign Out */}
             <button 
-              onClick={onSignOut}
-              className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors ml-1 sm:ml-2 whitespace-nowrap"
+             onClick={onSignOut}
+             className="text-sm text-gray-500 hover:text-red-600 font-medium transition-colors ml-1 sm:ml-2"
+             title="Sign Out"
             >
-              Sign Out
+            {/* Text for Desktop */}
+            <span className="hidden sm:inline">Sign Out</span>
+  
+            {/* Icon for Mobile (Saves space) */}
+            <svg className="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
             </button>
           </div>
 
