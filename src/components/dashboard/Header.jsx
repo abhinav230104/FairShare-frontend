@@ -84,7 +84,7 @@ const Header = ({ user, onSignOut }) => {
         <div className="flex justify-between items-center h-16">
           
           {/* Logo */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+          <div className="flex items-center gap-2 cursor-pointer">
             <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl sm:text-3xl">
               ⚖️
             </div>
