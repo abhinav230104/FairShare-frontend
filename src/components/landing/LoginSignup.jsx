@@ -126,7 +126,7 @@ const LoginSignup = ({ type, onClose }) => {
                   type="text"
                   value={name}
                   onChange={(e)=>setName(e.target.value)} 
-                  placeholder="John Doe"
+                  placeholder="Eg. Abhinav Uniyal"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition-all bg-gray-50 focus:bg-white"
                   required
                 />
